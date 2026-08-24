@@ -819,16 +819,13 @@ static UIColor *messageCellDynamicColor = nil;
 + (void)updateMentionAvatarsInView:(UIView *)view
                          messageID:(NSString *)messageID
 {
-    if (mentionAvatars.count == 0) return;
-
     NSString *currentMessageID = messageID;
     if ([NSStringFromClass(view.class) isEqual:@"DCDMessageTableViewCell"])
     {
         currentMessageID = [self mentionMessageIDForCell:view];
-        if (!currentMessageID || !mentionAvatars[currentMessageID]) return;
     }
 
-    NSArray<NSDictionary<NSString *, id> *> *mentions = currentMessageID ? mentionAvatars[currentMessageID] : nil;
+    NSArray<NSDictionary<NSString *, id> *> *mentions = mentionAvatars[currentMessageID];
     if (mentions.count > 0 && [view respondsToSelector:@selector(setAttributedText:)])
     {
         NSAttributedString *original = objc_getAssociatedObject(view, mentionAvatarOriginalTextKey);
@@ -857,7 +854,6 @@ static UIColor *messageCellDynamicColor = nil;
 
 + (void)updateMentionAvatarsInView:(UIView *)view
 {
-    if (mentionAvatars.count == 0) return;
     [self updateMentionAvatarsInView:view messageID:nil];
 }
 
@@ -914,21 +910,14 @@ static UIColor *messageCellDynamicColor = nil;
 {
     %orig;
     [ChatUI clearMentionAvatarStateInView:self];
-    BOOL enabled = messageBubblesEnabled ? [messageBubblesEnabled boolValue] : NO;
-    if (enabled)
-    {
-        [ChatUI updateMessageCell:self];
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{ [ChatUI updateMessageCell:self]; });
 }
 
 - (void)layoutSubviews
 {
     %orig;
 
-    if (mentionAvatars.count > 0)
-    {
-        [ChatUI updateMentionAvatarsInView:self];
-    }
+    [ChatUI updateMentionAvatarsInView:self];
 
     BOOL enabled = messageBubblesEnabled ? [messageBubblesEnabled boolValue] : NO;
     if (enabled)
