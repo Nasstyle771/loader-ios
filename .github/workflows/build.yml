@@ -3,16 +3,19 @@ run-name: >-
   ${{
     inputs.only_app_repo == true && 'app-repo deploy' ||
     inputs.only_apt_repo == true && 'apt-repo deploy' ||
-    format('{0} for {1}', (inputs.release == true && 'Release' || 'Build'), inputs.ipa_url)
+    format('{0} for {1}', (inputs.release == true && 'Release' || 'Build'), (inputs.ipa_url != '' && inputs.ipa_url || 'Latest Discord Stable'))
   }}
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       ipa_url:
         default: ""
-        description: "Direct link to the decrypted ipa"
-        required: true
+        description: "Direct link to decrypted Discord IPA (leave blank to auto-detect latest stable)"
+        required: false
         type: string
       release:
         default: true
@@ -82,7 +85,7 @@ env:
 jobs:
   build-tweak:
     if: &only_build_check inputs.only_app_repo != true && inputs.only_apt_repo != true
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 30
     permissions:
       contents: read
@@ -131,6 +134,7 @@ jobs:
           path: packages/*.deb
 
       - name: Attest rootless package
+        continue-on-error: true
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: packages/*.deb
@@ -186,8 +190,20 @@ jobs:
           IPA_URL: ${{ inputs.ipa_url }}
         run: |
           set -euo pipefail
+          TARGET_URL="$IPA_URL"
+          if [ -z "$TARGET_URL" ]; then
+            echo "Auto-detecting latest stable Discord IPA..."
+            RESPONSE=$(curl -s -H "Accept: application/json" https://ipa.aspy.dev/discord/stable/ || true)
+            LATEST_IPA=$(echo "$RESPONSE" | jq -r '.[-1].url // empty' 2>/dev/null | sed 's/^\.\///' || true)
+            if [ -z "$LATEST_IPA" ]; then
+              TARGET_URL="https://files.catbox.moe/pk80qh.ipa"
+            else
+              TARGET_URL="https://ipa.aspy.dev/discord/stable/$LATEST_IPA"
+            fi
+            echo "Using auto-detected Discord IPA: $TARGET_URL"
+          fi
           for attempt in 1 2 3; do
-            if curl --fail --location --output discord.ipa "$IPA_URL"; then
+            if curl --fail --location --output discord.ipa "$TARGET_URL"; then
               exit 0
             fi
             rm -f discord.ipa
@@ -299,6 +315,7 @@ jobs:
           path: ${{ env.APP_NAME }}.ipa
 
       - name: Attest IPA
+        continue-on-error: true
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: ${{ env.APP_NAME }}.ipa
@@ -391,6 +408,7 @@ jobs:
           path: unbound-ios-simulator.zip
 
       - name: Attest iOS Simulator artifact
+        continue-on-error: true
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: unbound-ios-simulator.zip

@@ -379,6 +379,17 @@ static dispatch_queue_t monitorRegistryQueue(void)
     {
         [FileSystem createDirectory:documents];
     }
+
+    // High-capacity media & avatar cache (256MB RAM / 1GB Disk)
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSUInteger memoryCapacity = 256 * 1024 * 1024; // 256 MB
+        NSUInteger diskCapacity   = 1024 * 1024 * 1024; // 1 GB
+        NSURLCache *cache = [[NSURLCache alloc] initWithMemoryCapacity:memoryCapacity
+                                                          diskCapacity:diskCapacity
+                                                              diskPath:@"UnboundMediaCache"];
+        [NSURLCache setSharedURLCache:cache];
+    });
 }
 
 + (NSString *)documents

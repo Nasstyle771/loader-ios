@@ -129,47 +129,33 @@ static void browserLoginStart(void)
         return;
     }
 
-    if (@available(iOS 26.2, *))
+    Class extensionManagerClass = NSClassFromString(@"SFSafariExtensionManager");
+    if (extensionManagerClass && [extensionManagerClass respondsToSelector:NSSelectorFromString(@"getStateOfExtensionWithIdentifier:completionHandler:")])
     {
         NSString *identifier = safariExtensionIdentifier();
-        if (identifier.length == 0)
+        if (identifier.length > 0)
         {
-            [Logger error:LOG_CATEGORY_DEFAULT
-                   format:@"Safari extension bundle identifier is unavailable."];
-            [Utilities alert:@"Discord could not identify the Safari extension."
-                       title:@"Could Not Check Extension"];
+            SEL selector = NSSelectorFromString(@"getStateOfExtensionWithIdentifier:completionHandler:");
+            typedef void (*GetStateIMP)(id, SEL, NSString *, void (^)(id state, NSError *error));
+            GetStateIMP getState = (GetStateIMP) [extensionManagerClass methodForSelector:selector];
+            getState(extensionManagerClass, selector, identifier, ^(id state, NSError *error) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (state && [state respondsToSelector:NSSelectorFromString(@"isEnabled")])
+                    {
+                        BOOL isEnabled = ((BOOL (*)(id, SEL)) objc_msgSend)(state, NSSelectorFromString(@"isEnabled"));
+                        if (!isEnabled)
+                        {
+                            [Logger info:LOG_CATEGORY_DEFAULT format:@"Safari extension is disabled."];
+                            [Utilities alert:@"Enable the Safari extension in Settings, then try browser login again."
+                                       title:@"Safari Extension Disabled"];
+                            return;
+                        }
+                    }
+                    browserLoginStartFlow();
+                });
+            });
             return;
         }
-
-        [SFSafariExtensionManager
-            getStateOfExtensionWithIdentifier:identifier
-                             completionHandler:^(SFSafariExtensionState *state, NSError *error) {
-                                 dispatch_async(dispatch_get_main_queue(), ^{
-                                     if (error || !state)
-                                     {
-                                         [Logger error:LOG_CATEGORY_DEFAULT
-                                                format:@"Could not read Safari extension state: %@.",
-                                                        error];
-                                         [Utilities alert:@"Discord could not check whether the Safari "
-                                                          @"extension is enabled."
-                                                    title:@"Could Not Check Extension"];
-                                         return;
-                                     }
-
-                                     if (!state.isEnabled)
-                                     {
-                                         [Logger info:LOG_CATEGORY_DEFAULT
-                                               format:@"Safari extension is disabled."];
-                                         [Utilities alert:@"Enable the Safari extension "
-                                                          @"in Settings, then try browser login again."
-                                                    title:@"Safari Extension Disabled"];
-                                         return;
-                                     }
-
-                                     browserLoginStartFlow();
-                                 });
-                             }];
-        return;
     }
 
     browserLoginStartFlow();

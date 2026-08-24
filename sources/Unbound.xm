@@ -128,6 +128,15 @@ static void injectUnboundPreBundle(jsi::Runtime &runtime)
     [JSI evaluate:moduleBootstrap tag:@"unbound:modules-bootstrap" runtime:runtime];
 
     {
+        NSData *vencordCompat = [Utilities getResource:@"vencord-compat" data:true ext:@"js"];
+        if (vencordCompat.length)
+        {
+            [Logger info:LOG_CATEGORY_DEFAULT format:@"Injecting Vencord/Vendetta compatibility bridge..."];
+            [JSI evaluate:vencordCompat tag:@"unbound:vencord-compat" runtime:runtime];
+        }
+    }
+
+    {
         NSData *preloadData = [LoaderShared buildPreloadScriptData];
         [Logger info:LOG_CATEGORY_DEFAULT
               format:@"Pre-loading settings, plugins, fonts and themes..."];
@@ -467,7 +476,7 @@ static void retryRCTInstanceHooks(NSUInteger attempt)
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(),
                    ^{
-                       if (![Utilities isLoadedWithElleKit])
+                       if (![Utilities isLoadedWithElleKit] && [Utilities isJailbroken])
                        {
                            [Utilities alert:@"Warning: Tweak is not loaded through ElleKit. "
                                             @"Functionality is not guaranteed."

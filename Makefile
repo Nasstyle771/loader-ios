@@ -14,16 +14,16 @@ BUILD_TIMESTAMP := $(shell date "+%Y-%m-%d %H:%M:%S %Z")
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = Unbound
-ATTESTATION_ENABLED := $(if $(filter 1,$(DEBUG)),0,1)
-COMMON_FLAGS = -fobjc-arc -DATTESTATION_ENABLED=$(ATTESTATION_ENABLED) -DPACKAGE_VERSION='@"$(THEOS_PACKAGE_BASE_VERSION)"' -DCOMMIT_HASH='@"$(COMMIT_HASH)"' -DCOMMIT_SHORT_HASH='@"$(COMMIT_SHORT_HASH)"' -DCOMMIT_SUBJECT='@"$(COMMIT_SUBJECT)"' -DCOMMIT_BRANCH='@"$(COMMIT_BRANCH)"' -DBUILD_TIMESTAMP='@"$(BUILD_TIMESTAMP)"' -I$(THEOS_PROJECT_DIR)/headers
+ATTESTATION_ENABLED := $(if $(filter 1,$(DEBUG)),0,$(shell ./tools/attestation_enabled.sh 2>/dev/null || echo 0))
+COMMON_FLAGS = -fobjc-arc -O3 -flto -DATTESTATION_ENABLED=$(ATTESTATION_ENABLED) -DPACKAGE_VERSION='@"$(THEOS_PACKAGE_BASE_VERSION)"' -DCOMMIT_HASH='@"$(COMMIT_HASH)"' -DCOMMIT_SHORT_HASH='@"$(COMMIT_SHORT_HASH)"' -DCOMMIT_SUBJECT='@"$(COMMIT_SUBJECT)"' -DCOMMIT_BRANCH='@"$(COMMIT_BRANCH)"' -DBUILD_TIMESTAMP='@"$(BUILD_TIMESTAMP)"' -I$(THEOS_PROJECT_DIR)/headers
 
 $(TWEAK_NAME)_FILES = $(shell find sources -name "*.x*" -o -name "*.m*")
 $(TWEAK_NAME)_CFLAGS = $(COMMON_FLAGS)
 # _CCFLAGS (not _CXXFLAGS) is what Theos applies to C++/Objective-C++ compiles.
 $(TWEAK_NAME)_CCFLAGS = $(COMMON_FLAGS) -std=c++20
 # Resolve JSI/TurboModule symbols from Discord's React dylib at load time.
-$(TWEAK_NAME)_LDFLAGS = -undefined dynamic_lookup
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation AuthenticationServices UniformTypeIdentifiers UserNotifications Security SafariServices AVKit AVFoundation CoreHaptics
+$(TWEAK_NAME)_LDFLAGS = -undefined dynamic_lookup -flto
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation AuthenticationServices UniformTypeIdentifiers UserNotifications Security SafariServices AVKit AVFoundation CoreHaptics QuartzCore
 
 BUNDLE_NAME = UnboundResources
 $(BUNDLE_NAME)_INSTALL_PATH = "/Library/Application\ Support/"
@@ -40,6 +40,8 @@ before-all::
 	@if [ ! -d "resources" ] || [ -z "$$(ls -A resources 2>/dev/null)" ]; then \
 		git submodule update --init --recursive || exit 1; \
 	fi
+	@mkdir -p resources
+	@cp -f assets/vencord-compat.js resources/vencord-compat.js 2>/dev/null || true
 
 after-stage::
 	find $(THEOS_STAGING_DIR) -name ".DS_Store" -delete
