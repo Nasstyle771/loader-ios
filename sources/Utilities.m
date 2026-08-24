@@ -512,16 +512,20 @@ static NSString *bundle = nil;
         return [newArchEnabled boolValue];
     }
 
-    void *symbol = dlsym(RTLD_DEFAULT, "RCTIsNewArchEnabled");
-    if (!symbol)
+    if (NSClassFromString(@"RCTInstance") != nil)
     {
-        return NO;
+        return YES;
     }
 
-    typedef BOOL (*RCTIsNewArchEnabledFn)(void);
-    RCTIsNewArchEnabledFn isNewArchEnabled = (RCTIsNewArchEnabledFn) symbol;
+    void *symbol = dlsym(RTLD_DEFAULT, "RCTIsNewArchEnabled");
+    if (symbol)
+    {
+        typedef BOOL (*RCTIsNewArchEnabledFn)(void);
+        RCTIsNewArchEnabledFn isNewArchEnabled = (RCTIsNewArchEnabledFn) symbol;
+        return isNewArchEnabled ? isNewArchEnabled() : YES;
+    }
 
-    return isNewArchEnabled ? isNewArchEnabled() : NO;
+    return YES;
 }
 
 + (NSString *)getAppStoreReceiptName

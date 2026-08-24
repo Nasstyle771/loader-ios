@@ -368,6 +368,18 @@ jobs:
       - name: Convert for iOS Simulator
         run: |
           ./simforge convert Payload/Discord.app
+          if [ -d "Payload/Discord.app/Frameworks" ]; then
+            for fw in Payload/Discord.app/Frameworks/*; do
+              if [ -f "$fw" ]; then
+                ./simforge convert "$fw" || true
+              elif [ -d "$fw" ]; then
+                name=$(basename "$fw" .framework)
+                if [ -f "$fw/$name" ]; then
+                  vtool -set-build-version 7 14.0 17.0 -replace -output "$fw/$name" "$fw/$name" 2>/dev/null || ./simforge convert "$fw/$name" || true
+                fi
+              fi
+            done
+          fi
           codesign -f -s - Payload/Discord.app/Frameworks/* || true
           codesign -f -s - Payload/Discord.app
 

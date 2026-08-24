@@ -440,14 +440,6 @@ static void retryRCTInstanceHooks(NSUInteger attempt)
 
 %ctor
 {
-    if (![Utilities isRNNewArchEnabled])
-    {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [Utilities
-                alert:@"This version of Discord is incompatible with this version of the Tweak."];
-        });
-        return;
-    }
 
 #if ATTESTATION_ENABLED
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
