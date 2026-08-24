@@ -22,7 +22,7 @@ $(TWEAK_NAME)_CFLAGS = $(COMMON_FLAGS)
 # _CCFLAGS (not _CXXFLAGS) is what Theos applies to C++/Objective-C++ compiles.
 $(TWEAK_NAME)_CCFLAGS = $(COMMON_FLAGS) -std=c++20
 # Resolve JSI/TurboModule symbols from Discord's React dylib at load time.
-$(TWEAK_NAME)_LDFLAGS = -undefined dynamic_lookup -flto
+$(TWEAK_NAME)_LDFLAGS = -undefined dynamic_lookup -flto -rpath @loader_path -rpath @loader_path/Frameworks -rpath @executable_path/Frameworks
 $(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation AuthenticationServices UniformTypeIdentifiers UserNotifications Security SafariServices AVKit AVFoundation CoreHaptics QuartzCore
 
 BUNDLE_NAME = UnboundResources
