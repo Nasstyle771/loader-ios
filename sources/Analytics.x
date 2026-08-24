@@ -107,7 +107,7 @@
                                                                          HTTPVersion:@"HTTP/1.1"
                                                                         headerFields:@{}];
             completionHandler([NSData data], fakeResponse, nil);
-            return (NSURLSessionDataTask *)[[NSURLSessionTask alloc] init];
+            return nil;
         }
     }
     return %orig(request, completionHandler);
