@@ -7,3 +7,4 @@ patcher-ios
 private_key.pem
 attestation_private.pem
 .claude/worktrees
+dist/
